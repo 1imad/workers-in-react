@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "npm": "^10.8.3"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "name": "worker",
+  "version": "1.0.0",
+  "main": "server.js",
+  "author": "Syed Imaduddin Ahmed",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
