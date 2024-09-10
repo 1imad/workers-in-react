@@ -1,35 +1,47 @@
-// src/sseWorker.ts
 
-self.onmessage = (event) => {
-  const { url } = event.data;
+// sseWorker.js
 
-  // Open the SSE connection
-  const eventSource = new EventSource(url);
+// Handle messages from the main thread to start the SSE connection
+self.onmessage = function (event) {
+  const { sseUrl } = event.data;
 
-  // Listen for incoming messages (tokens from LLM)
-  eventSource.onmessage = (e) => {
-    const data = e.data;
+  // Start the Server-Sent Events (SSE) connection
+  const sse = new EventSource(sseUrl);
 
-    // Check if the data indicates the stream has ended
-    if (data === "end") {
-      // Send an "end" signal back to the main thread
-      self.postMessage({ end: true });
-      eventSource.close();
-    } else {
-      // Otherwise, send the token data back to the main thread
-      self.postMessage({ token: data });
+  // Listen for the 'response' event
+  sse.onmessage = (e) => {
+    try {
+      // Parse the incoming data (assuming it's JSON)
+      const parsedData = JSON.parse(e.data);
+
+      // Send the parsed tokens back to the main thread
+      self.postMessage({ type: 'response', data: parsedData.token });
+    } catch (error) {
+      self.postMessage({ type: 'error', message: 'Error parsing response event data', error });
     }
   };
 
-  // Handle potential errors
-  eventSource.onerror = (error) => {
-    console.error("SSE Error:", error);
-    self.postMessage({ error: "An error occurred with the SSE connection." });
-    eventSource.close();
-  };
+  // Listen for the 'end' event
+  sse.addEventListener('end', (evt) => {
+    try {
+      // Parse the end event data (assuming it's JSON)
+      const endData = JSON.parse(evt.data);
 
-  // Optionally handle closing the SSE connection when the worker terminates
-  self.onclose = () => {
-    eventSource.close();
-  };
+      // Send the end data back to the main thread
+      self.postMessage({ type: 'end', data: endData.data });
+
+      // Close the SSE connection
+      sse.close();
+    } catch (error) {
+      self.postMessage({ type: 'error', message: 'Error parsing end event data', error });
+    }
+  });
+
+  // Handle SSE connection errors
+  sse.addEventListener('error', (evt) => {
+    self.postMessage({ type: 'error', message: 'SSE connection error occurred', evt });
+
+    // Close the connection on error
+    sse.close();
+  });
 };
